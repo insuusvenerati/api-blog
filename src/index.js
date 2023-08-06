@@ -1,44 +1,99 @@
-import 'bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './css/styles.css';
+import "@picocss/pico/css/pico.min.css";
+import "./css/styles.css";
 
 // Business Logic
 
-function getWeather(city) {
-  let request = new XMLHttpRequest();
-  const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.API_KEY}`;
+const API_URL = process.env.API_URL;
 
-  request.addEventListener("loadend", function() {
-    const response = JSON.parse(this.responseText);
-    if (this.status === 200) {
-      printElements(response, city);
-    } else {
-      printError(this, response, city);
-    }
-  });
-
-  request.open("GET", url, true);
-  request.send();
+async function getResource(resource) {
+  const response = await fetch(`${API_URL}/${resource}`);
+  return await response.json();
 }
 
-// UI Logic
+async function getUserWithPosts(userId) {
+  const posts = await getResource("posts");
+  const users = await getResource("users");
 
-function printElements(apiResponse, city) {
-  document.querySelector('#showResponse').innerText = `The humidity in ${city} is ${apiResponse.main.humidity}%. 
-  The temperature in Kelvins is ${apiResponse.main.temp} degrees.`;
+  const user = users.find((user) => user.id === userId);
+  const userPosts = posts.filter((post) => post.userId === userId);
+
+  return {
+    ...user,
+    posts: userPosts,
+  };
 }
 
-function printError(request, apiResponse, city) {
-  document.querySelector('#showResponse').innerText = `There was an error accessing the weather data for ${city}: ${request.status} ${request.statusText}: ${apiResponse.message}`;
-}
+// UI Logic //
 
-function handleFormSubmission(event) {
-  event.preventDefault();
-  const city = document.querySelector('#location').value;
-  document.querySelector('#location').value = null;
-  getWeather(city);
-}
+window.addEventListener("load", async () => {
+  // Home page
+  const posts = await getResource("posts");
+  const comments = await getResource("comments");
+  const postsEl = document.querySelector("#posts");
+  const commentsEl = document.querySelector("#comments");
 
-window.addEventListener("load", function() {
-  document.querySelector('form').addEventListener("submit", handleFormSubmission);
+  const userTest = await getUserWithPosts(1);
+  console.log(userTest);
+
+  // Post page
+  const id = 1;
+  const [post, user, postComments] = await Promise.all([
+    getResource(`posts/${id}`),
+    getResource(`users/${id}`),
+    getResource(`posts/${id}/comments`),
+  ]);
+
+  const postCommentsEl = document.querySelector("#postComments");
+  const postAuthorEl = document.querySelector("#postAuthor");
+  const postEl = document.querySelector("#post");
+
+  if (postsEl) {
+    posts.forEach((post) => {
+      const postEl = document.createElement("div");
+      postEl.classList.add("post");
+      postEl.innerHTML = `
+        <a href="/post">${post.title}</a>
+        <p>${post.body}</p>
+      `;
+      postsEl.appendChild(postEl);
+    });
+  }
+
+  if (commentsEl) {
+    comments.forEach((comment) => {
+      const commentEl = document.createElement("div");
+      commentEl.classList.add("comment");
+      commentEl.innerHTML = `
+        <h2>${comment.name}</h2>
+        <p>${comment.body}</p>
+      `;
+      commentsEl.appendChild(commentEl);
+    });
+  }
+
+  if (postEl) {
+    postEl.innerHTML = `
+      <h1>${post.title}</h1>
+      <p>${post.body}</p>
+    `;
+  }
+
+  if (postAuthorEl) {
+    postAuthorEl.innerHTML = `
+      <h3>${user.name}</h3>
+      <p>${user.email}</p>
+    `;
+  }
+
+  if (postCommentsEl) {
+    postComments.forEach((comment) => {
+      const commentEl = document.createElement("div");
+      commentEl.classList.add("comment");
+      commentEl.innerHTML = `
+        <h2>${comment.name}</h2>
+        <p>${comment.body}</p>
+      `;
+      postCommentsEl.appendChild(commentEl);
+    });
+  }
 });
