@@ -4,9 +4,19 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const Dotenv = require("dotenv-webpack");
 
 module.exports = {
-  entry: "./src/index.js",
+  mode: process.env.NODE_ENV || "development",
+  entry: {
+    main: "./src/pages/home.js",
+    post: "./src/pages/post.js",
+    style: "./src/style.js",
+  },
+  optimization: {
+    splitChunks: {
+      chunks: "all",
+    },
+  },
   output: {
-    filename: "bundle.js",
+    filename: "[name].bundle.js",
     path: path.resolve(__dirname, "dist"),
   },
   devtool: "eval-source-map",
@@ -16,13 +26,15 @@ module.exports = {
   plugins: [
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
-      title: "Shape Tracker",
       template: "./src/index.html",
-      inject: "body",
+      inject: "head",
+      chunks: ["main", "style"],
     }),
     new HtmlWebpackPlugin({
       filename: "post/index.html",
       template: "./src/post.html",
+      inject: "head",
+      chunks: ["post", "style"],
     }),
     new Dotenv(),
   ],
